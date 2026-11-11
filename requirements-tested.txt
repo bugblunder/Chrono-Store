@@ -1,0 +1,11 @@
+# Direct dependency versions used for the included verification run.
+# Install these first for compatible loading of the bundled sklearn model.
+# This is not a fully transitive dependency lock.
+fastapi==0.141.1
+uvicorn==0.52.1
+pydantic==2.13.4
+pandas==2.2.3
+scikit-learn==1.8.0
+joblib==1.5.3
+openpyxl==3.1.5
+httpx==0.28.1
