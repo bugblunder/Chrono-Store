@@ -75,6 +75,8 @@ def create_app(db_path: str | Path = "data/store.sqlite3", model_path: str | Pat
             raise HTTPException(503, "Train a model, then start the server with --model PATH")
         vector = read_features([query])[0]
         return {"probability": predict(app.state.model, vector), "target": "repeat_purchase",
+                "target_condition": "given a positive purchase now; not general churn",
+                "model_name": app.state.model["metadata"].get("served_model", "logistic_regression"),
                 "horizon_days": app.state.model["metadata"]["horizon_days"],
                 "model_trained_snapshot_seq": app.state.model["metadata"]["snapshot_seq"],
                 "features": vector.model_dump()}

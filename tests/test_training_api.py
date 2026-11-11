@@ -3,15 +3,17 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 import pandas as pd
+import numpy as np
 
 from pitstore.api import create_app
 from pitstore.contracts import FEATURE_NAMES, FeatureQuery, Purchase, from_us
 from pitstore.data import synthetic_events
 from pitstore.store import FeatureStore
-from pitstore.training import build_training_frame, load_model, predict, train_model
+from pitstore.training import build_training_frame, load_model, predict, purged_split, train_model
 
 
 class TrainingTests(unittest.TestCase):
@@ -22,7 +24,7 @@ class TrainingTests(unittest.TestCase):
         cls.store = FeatureStore(cls.path)
         cls.store.ingest(synthetic_events(customers=65))
         cls.output = Path(cls.temp.name)/"artifacts"
-        cls.metrics = train_model(cls.store, cls.output, data_kind="synthetic_demo")
+        cls.metrics = train_model(cls.store, cls.output, data_kind="synthetic_demo", bootstrap_resamples=64)
 
     @classmethod
     def tearDownClass(cls):
@@ -72,6 +74,46 @@ class TrainingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError,"ingest events"):
                 build_training_frame(FeatureStore(Path(directory)/"empty.sqlite3"))
+
+    def test_every_method_uses_same_holdout_and_exported_served_features(self):
+        frame = pd.read_csv(self.output/"training_features.csv")
+        test = frame[frame.split == "test"].reset_index(drop=True)
+        predictions = pd.read_csv(self.output/"holdout_predictions.csv")
+        self.assertEqual(len(test), len(predictions))
+        np.testing.assert_array_equal(test.as_of_us, predictions.as_of_us)
+        np.testing.assert_array_equal(test.target, predictions.target)
+        np.testing.assert_array_equal(test.purchases_30d, predictions.count_30d)
+        np.testing.assert_array_equal(test.purchases_90d, predictions.count_90d)
+        np.testing.assert_allclose(-test.recency_days, predictions.recency)
+        np.testing.assert_allclose(predictions.prior_baseline, self.metrics["train_positive_rate"])
+        self.assertEqual(self.metrics["bootstrap"]["test_customers"], test.customer_id.nunique())
+        self.assertIn("conditional", (self.output/"evaluation.md").read_text().lower())
+
+    def test_gradient_boosting_can_be_served_with_matching_predictions(self):
+        artifact = load_model(self.output/"gradient_boosting.joblib")
+        holdout = pd.read_csv(self.output/"holdout_predictions.csv")
+        row = holdout.iloc[0]
+        with TestClient(create_app(self.path, self.output/"gradient_boosting.joblib")) as client:
+            response = client.post("/predict", json={"customer_id": row.customer_id,
+                                   "as_of": row.as_of, "snapshot_seq": int(row.snapshot_seq)})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["model_name"], "gradient_boosting")
+        self.assertIn("given a positive purchase", response.json()["target_condition"])
+        self.assertAlmostEqual(response.json()["probability"], row.gradient_boosting)
+        self.assertEqual(artifact["metadata"]["feature_names"], FEATURE_NAMES)
+
+    def test_changing_holdout_labels_cannot_change_fitted_predictions(self):
+        frame, metadata = build_training_frame(self.store)
+        _, test, _ = purged_split(frame)
+        frame.loc[test.index, "target"] = 1-frame.loc[test.index, "target"]
+        changed_output = Path(self.temp.name)/"changed_labels"
+        with patch("pitstore.training.build_training_frame", return_value=(frame, metadata)):
+            train_model(self.store, changed_output, bootstrap_resamples=16)
+        original = pd.read_csv(self.output/"holdout_predictions.csv")
+        changed = pd.read_csv(changed_output/"holdout_predictions.csv")
+        for name in self.metrics["methods"]:
+            np.testing.assert_array_equal(original[name], changed[name])
+        np.testing.assert_array_equal(original.target, 1-changed.target)
 
 
 class APITests(unittest.TestCase):

@@ -54,6 +54,8 @@ def main(argv=None):
     demo = sub.add_parser("demo", help="Seed synthetic data and train a smoke-test model")
     demo.add_argument("--db", type=Path, default=Path("data/demo.sqlite3"))
     demo.add_argument("--output", type=Path, default=Path("artifacts/demo"))
+    demo.add_argument("--bootstrap-resamples", type=int, default=2000)
+    demo.add_argument("--bootstrap-seed", type=int, default=42)
     train = sub.add_parser("train")
     train.add_argument("--db", type=Path, default=Path("data/store.sqlite3"))
     train.add_argument("--output", type=Path, default=Path("artifacts/uci"))
@@ -61,6 +63,9 @@ def main(argv=None):
     train.add_argument("--warmup-days", type=int, default=90)
     train.add_argument("--observation-end", type=datetime.fromisoformat)
     train.add_argument("--test-fraction", type=float, default=0.25)
+    train.add_argument("--bootstrap-resamples", type=int, default=2000)
+    train.add_argument("--bootstrap-seed", type=int, default=42)
+    train.add_argument("--confidence", type=float, default=0.95)
     features = sub.add_parser("features", help="Retrieve one reproducible feature vector")
     features.add_argument("--db", type=Path, default=Path("data/store.sqlite3"))
     features.add_argument("--customer", required=True)
@@ -100,12 +105,14 @@ def main(argv=None):
             random.Random(42).shuffle(events)
             result = store.ingest(events)
             print(f"Ingested {result.inserted} SYNTHETIC purchases in shuffled order.", file=sys.stderr)
-            emit(train_model(store, args.output, data_kind="synthetic_demo"))
+            emit(train_model(store, args.output, data_kind="synthetic_demo",
+                             bootstrap_resamples=args.bootstrap_resamples, bootstrap_seed=args.bootstrap_seed))
         elif args.command == "train":
             started = time.perf_counter()
             metrics = train_model(FeatureStore(args.db), args.output, horizon_days=args.horizon_days,
                                   warmup_days=args.warmup_days, observation_end=args.observation_end,
-                                  test_fraction=args.test_fraction)
+                                  test_fraction=args.test_fraction, bootstrap_resamples=args.bootstrap_resamples,
+                                  bootstrap_seed=args.bootstrap_seed, confidence=args.confidence)
             emit({**metrics, "elapsed_seconds": round(time.perf_counter()-started, 3)})
         elif args.command == "features":
             result = FeatureStore(args.db).features(FeatureQuery(customer_id=args.customer, as_of=args.as_of,
