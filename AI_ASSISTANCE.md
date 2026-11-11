@@ -35,3 +35,13 @@ UCI Online Retail is external public data, credited in `DATA_NOTICE.md` and the
 README. Raw UCI timestamps describe events; they do not include historical ingestion
 times. Features reconstruct event-time history from a pinned imported snapshot.
 Runtime ingestion metadata and commit history are separate from dataset event time.
+
+
+## ChronoStore release preparation
+
+The 1.0.0 release preparation applies ChronoStore branding, updates package metadata,
+adds a `chronostore` command alias, and updates release documentation. The original
+Python import namespace (`pitstore`) is intentionally retained for compatibility.
+The user has stated that they have the original owner's permission to modify,
+redistribute and publish derivative versions. This statement records the user's
+representation; it is not independent verification of that permission.

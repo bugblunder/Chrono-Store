@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "point-in-time-feature-store"
-version = "0.2.0"
-description = "A reproducible SQLite feature store with event-time and snapshot correctness"
+name = "chronostore"
+version = "1.0.0"
+description = "A reproducible point-in-time feature store with event-time and snapshot correctness"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1", "uvicorn>=0.30,<1", "pydantic>=2.8,<3",
@@ -16,7 +16,8 @@ dependencies = [
 test = ["httpx>=0.27,<1"]
 
 [project.scripts]
-pitstore = "pitstore.cli:main"
+chronostore = "pitstore.cli:main"
+pitstore = "pitstore.cli:main"  # Backward-compatible command alias
 
 [tool.setuptools.packages.find]
 include = ["pitstore*"]

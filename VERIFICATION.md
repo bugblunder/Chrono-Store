@@ -1,4 +1,4 @@
-# Verified run
+# Verification record
 
 Evaluation revision 0.2.0 verified on 11 November 2026 with Python 3.12.14,
 scikit-learn 1.8.0 and NumPy 2.3.5. Direct package versions are in
@@ -111,3 +111,16 @@ The report, metrics, feature CSV, prediction CSV and import report are committed
 SQLite databases and serialized models are bundled but excluded from Git. The
 archive includes actual Git history; `AI_ASSISTANCE.md` explains its scope and the
 distinction between automated checkpoints and personal contributions.
+
+
+## ChronoStore 1.0.0 release-preparation checks
+
+- The existing 34-test suite was independently rerun in the review workspace on
+  Python 3.13.5 with the preinstalled dependency set: **34 tests passed**.
+- A fresh isolated dependency installation was attempted but could not complete
+  because package-index network access was unavailable. The successful test run
+  used the workspace's existing dependencies, not a newly resolved lockfile.
+- The project was not re-trained and the UCI workbook was not re-downloaded during
+  branding changes. Historical evaluation metrics remain those documented above.
+- A full wheel build/install and the GitHub Actions matrix should be run in CI
+  before describing the release as fully validated across Python versions.

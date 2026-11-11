@@ -41,7 +41,7 @@ def leakage_demo():
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="pitstore")
+    parser = argparse.ArgumentParser(prog="chronostore")
     sub = parser.add_subparsers(dest="command", required=True)
     download = sub.add_parser("download", help="Download the public UCI workbook")
     download.add_argument("--output", type=Path, default=Path("data/raw"))

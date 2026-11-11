@@ -1,6 +1,8 @@
-# Point-in-time feature store
+# ChronoStore
 
-A runnable Python project that ingests timestamped purchases, persists versioned customer features, serves them through FastAPI, and trains a repeat-purchase classifier on the same feature API.
+**A reproducible point-in-time feature store for event-time ML.**
+
+ChronoStore ingests timestamped purchase events, persists versioned customer features, serves reproducible historical feature snapshots through FastAPI, and trains repeat-purchase models against the same feature implementation.
 
 The central invariant is **every feature for time `t` uses events strictly before `t`**. A captured database snapshot additionally freezes which events were known, allowing exact replay after out-of-order events arrive.
 
@@ -10,6 +12,8 @@ model clearly improves on the 90-day count rule. See the committed
 [evaluation report](artifacts/uci/evaluation.md) and [AI-assistance disclosure](AI_ASSISTANCE.md).
 
 ## Quick start
+
+The installed command is `chronostore`. The Python module remains `pitstore` for import and command compatibility with the original package namespace.
 
 Requires Python 3.11+. From this directory:
 
