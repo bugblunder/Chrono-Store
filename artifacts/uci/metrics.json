@@ -1,0 +1,227 @@
+{
+  "data_kind": "imported",
+  "train_rows": 7710,
+  "test_rows": 3112,
+  "purged_rows": 1501,
+  "test_start": "2011-09-23T09:14:00Z",
+  "train_last_label_end": "2011-09-23T09:13:00Z",
+  "train_positive_rate": 0.44578469520103764,
+  "test_positive_rate": 0.49421593830334193,
+  "target_definition": "Given a positive purchase now at t, another positive purchase in (t, t + 30 days]; not general churn",
+  "served_model": "logistic_regression",
+  "model_selection": "Default retained a priori; holdout not used for selection or tuning",
+  "baseline_definitions": {
+    "count_30d": "purchases_30d (larger score predicts more repeat purchases)",
+    "count_90d": "purchases_90d (larger score predicts more repeat purchases)",
+    "recency": "-recency_days (more recent purchases predict more repeat purchases)"
+  },
+  "model_parameters": {
+    "logistic_regression": {
+      "scaler": "StandardScaler fitted on training only",
+      "C": 1.0,
+      "class_weight": null,
+      "dual": false,
+      "fit_intercept": true,
+      "intercept_scaling": 1,
+      "l1_ratio": 0.0,
+      "max_iter": 2000,
+      "n_jobs": null,
+      "penalty": "deprecated",
+      "random_state": 42,
+      "solver": "lbfgs",
+      "tol": 0.0001,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "gradient_boosting": {
+      "ccp_alpha": 0.0,
+      "criterion": "friedman_mse",
+      "init": null,
+      "learning_rate": 0.05,
+      "loss": "log_loss",
+      "max_depth": 3,
+      "max_features": null,
+      "max_leaf_nodes": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 30,
+      "min_samples_split": 2,
+      "min_weight_fraction_leaf": 0.0,
+      "n_estimators": 150,
+      "n_iter_no_change": null,
+      "random_state": 42,
+      "subsample": 1.0,
+      "tol": 0.0001,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    }
+  },
+  "test_fraction": 0.25,
+  "model": {
+    "score_type": "probability",
+    "roc_auc": 0.7844640558622479,
+    "average_precision": 0.8061028569534527,
+    "brier_score": 0.1897760382473038,
+    "log_loss": 0.5579682403820461,
+    "roc_auc_ci": {
+      "lower": 0.7586793807884366,
+      "upper": 0.8072387625613672
+    }
+  },
+  "prior_baseline": {
+    "score_type": "probability",
+    "roc_auc": 0.5,
+    "average_precision": 0.49421593830334193,
+    "brier_score": 0.2523121299387238,
+    "log_loss": 0.6978013208315589,
+    "roc_auc_ci": {
+      "lower": 0.5,
+      "upper": 0.5
+    }
+  },
+  "sklearn_version": "1.8.0",
+  "numpy_version": "2.3.5",
+  "feature_version": "retail-v1",
+  "feature_names": [
+    "purchases_7d",
+    "spend_7d",
+    "purchases_30d",
+    "spend_30d",
+    "purchases_90d",
+    "spend_90d",
+    "avg_basket_90d",
+    "recency_days",
+    "has_history_90d"
+  ],
+  "horizon_days": 30,
+  "warmup_days": 90,
+  "snapshot_seq": 18532,
+  "observation_start": "2010-12-01T08:26:00Z",
+  "observation_end": "2011-12-09T12:50:00Z",
+  "availability_mode": "reconstructed_event_time",
+  "availability_note": "All events in the recorded snapshot are assumed available at event time. UCI has no original arrival history; this is not a replay of historical live visibility.",
+  "methods": {
+    "prior_baseline": {
+      "score_type": "probability",
+      "roc_auc": 0.5,
+      "average_precision": 0.49421593830334193,
+      "brier_score": 0.2523121299387238,
+      "log_loss": 0.6978013208315589,
+      "roc_auc_ci": {
+        "lower": 0.5,
+        "upper": 0.5
+      }
+    },
+    "count_30d": {
+      "score_type": "ranking_only",
+      "roc_auc": 0.7237629357422221,
+      "average_precision": 0.7155308837746824,
+      "brier_score": null,
+      "log_loss": null,
+      "roc_auc_ci": {
+        "lower": 0.6947606369768258,
+        "upper": 0.7506284029463814
+      }
+    },
+    "count_90d": {
+      "score_type": "ranking_only",
+      "roc_auc": 0.7812880554128119,
+      "average_precision": 0.7836294931378661,
+      "brier_score": null,
+      "log_loss": null,
+      "roc_auc_ci": {
+        "lower": 0.7552034116003032,
+        "upper": 0.8047076434317809
+      }
+    },
+    "recency": {
+      "score_type": "ranking_only",
+      "roc_auc": 0.7367282135085252,
+      "average_precision": 0.6738105753061162,
+      "brier_score": null,
+      "log_loss": null,
+      "roc_auc_ci": {
+        "lower": 0.7109487923338765,
+        "upper": 0.7601832396627021
+      }
+    },
+    "logistic_regression": {
+      "score_type": "probability",
+      "roc_auc": 0.7844640558622479,
+      "average_precision": 0.8061028569534527,
+      "brier_score": 0.1897760382473038,
+      "log_loss": 0.5579682403820461,
+      "roc_auc_ci": {
+        "lower": 0.7586793807884366,
+        "upper": 0.8072387625613672
+      }
+    },
+    "gradient_boosting": {
+      "score_type": "probability",
+      "roc_auc": 0.7851258172877531,
+      "average_precision": 0.805037279544376,
+      "brier_score": 0.18853204554163253,
+      "log_loss": 0.5535224393498861,
+      "roc_auc_ci": {
+        "lower": 0.7597366312385364,
+        "upper": 0.807942109845531
+      }
+    }
+  },
+  "paired_auc_differences": {
+    "logistic_regression_minus_count_30d": {
+      "estimate": 0.06070112012002582,
+      "lower": 0.04785395918571426,
+      "upper": 0.07346107398794584,
+      "interpretation": "higher_on_this_holdout"
+    },
+    "logistic_regression_minus_count_90d": {
+      "estimate": 0.0031760004494360006,
+      "lower": -0.0011058823021775298,
+      "upper": 0.006943558210130767,
+      "interpretation": "no_clear_difference"
+    },
+    "logistic_regression_minus_recency": {
+      "estimate": 0.047735842353722635,
+      "lower": 0.0365896851437795,
+      "upper": 0.057977456169912206,
+      "interpretation": "higher_on_this_holdout"
+    },
+    "gradient_boosting_minus_count_30d": {
+      "estimate": 0.061362881545531045,
+      "lower": 0.04919724253334197,
+      "upper": 0.07371718488530182,
+      "interpretation": "higher_on_this_holdout"
+    },
+    "gradient_boosting_minus_count_90d": {
+      "estimate": 0.0038377618749412257,
+      "lower": -0.0007391708619681243,
+      "upper": 0.008326728127150781,
+      "interpretation": "no_clear_difference"
+    },
+    "gradient_boosting_minus_recency": {
+      "estimate": 0.04839760377922786,
+      "lower": 0.03783753932039937,
+      "upper": 0.058578452725837164,
+      "interpretation": "higher_on_this_holdout"
+    }
+  },
+  "bootstrap": {
+    "method": "paired customer-cluster percentile bootstrap",
+    "confidence_level": 0.95,
+    "seed": 42,
+    "requested_resamples": 2000,
+    "valid_resamples": 2000,
+    "skipped_single_class_resamples": 0,
+    "test_customers": 1964,
+    "unit_of_resampling": "customer_id",
+    "estimand": "purchase-anchor-weighted ROC AUC in this fixed holdout period",
+    "primary_reference": "count_90d",
+    "multiplicity_adjustment": "none; all comparisons are exploratory",
+    "scope": "Conditional on fitted models and one chronological holdout. No model refitting; does not measure training-sample, temporal-regime or cross-customer shared-shock uncertainty."
+  },
+  "file_sha256": {
+    "training_features.csv": "e866de157c5c00e44be3e362ce1277bd24b82f1f01552f474769bd0ff98575e8",
+    "holdout_predictions.csv": "bfec8d189c4d16ebe78f310286fd6a327f1d3cb9b5e14ccdc5eb6f8b2e814d46"
+  }
+}

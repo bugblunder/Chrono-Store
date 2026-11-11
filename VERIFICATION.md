@@ -1,17 +1,21 @@
 # Verified run
 
-Verified on 11 November 2026 with Python 3.12.14 and scikit-learn 1.8.0. Direct package versions are in `requirements-tested.txt`.
+Evaluation revision 0.2.0 verified on 11 November 2026 with Python 3.12.14,
+scikit-learn 1.8.0 and NumPy 2.3.5. Direct package versions are in
+`requirements-tested.txt`. The existing UCI database was reused; no fresh data
+download or new model tuning was performed in this revision.
 
 ## Executed checks
 
-- **23 automated tests passed** (`python -m unittest discover -s tests -v`).
-- Built the Python wheel and installed it into an isolated target directory successfully.
-- Ran the synthetic end-to-end demo: 4,197 events; model and training CSV generated.
+- **34 automated tests passed** (`python -m unittest discover -s tests -v`).
+- Built the version 0.2.0 Python wheel and verified installation in an isolated target directory.
+- Re-ran the synthetic training workflow on the existing 4,197-event demo store with all six methods and 2,000 bootstrap resamples. These results are smoke tests, not evidence of real-world ML quality.
 - Ran the leakage demonstration: original spend 10 GBP; adding future/equal-time events kept it 10 GBP; a late past event changed a new snapshot to 30 GBP; replaying the original snapshot returned 10 GBP.
-- Downloaded the UCI workbook, normalized it and imported in deliberately shuffled order.
-- Trained the real-data model and saved all features, labels and split assignments.
-- Exported offline features from the example JSONL requests.
-- Started uvicorn and made real localhost HTTP calls to `/health`, `/features`, `/predict`, and `/openapi.json`. Feature and prediction provenance matched exactly; model loading and graceful shutdown succeeded.
+- Reused the UCI import from the initial project, which was ingested in deliberately shuffled order. Checked the available source workbook checksum and event count against its import report.
+- Trained logistic regression and gradient boosting on the same real-data split, evaluated four baselines and saved all features, labels, split assignments and holdout scores.
+- Computed 2,000 paired customer-cluster bootstrap samples (all valid) for six AUCs and six learner-minus-rule differences.
+- Verified the bootstrap against an independent implementation that physically duplicates whole customers' rows. Changing held-out labels leaves every method's fitted predictions unchanged.
+- Started uvicorn separately for both model artifacts and made real localhost HTTP calls to `/health`, `/features`, `/predict`, and `/openapi.json`. Feature and prediction provenance matched exactly; target caveat and model names were exposed, and graceful shutdown succeeded.
 - Tested package construction on this Python runtime. The included CI matrix is configured for Python 3.11–3.13; those other runtimes were not executed here.
 
 ## UCI preprocessing
@@ -41,18 +45,42 @@ Source workbook SHA-256: `43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3
 
 First test timestamp: `2011-09-23T09:14:00Z`. Latest training label end: `2011-09-23T09:13:00Z`. Every training label ends strictly before the first test prediction. The outcome observation endpoint is `2011-12-09T12:50:00Z`. Test positive rate: 49.42%.
 
-| Metric | Logistic regression | Prior baseline |
-|---|---:|---:|
-| ROC AUC (higher is better) | 0.7845 | 0.5000 |
-| Average precision (higher is better) | 0.8061 | 0.4942 |
-| Brier score (lower is better) | 0.1898 | 0.2523 |
-| Log loss (lower is better) | 0.5580 | 0.6978 |
+| Method | ROC AUC | 95% customer-bootstrap interval | Average precision | Brier | Log loss |
+|---|---:|---|---:|---:|---:|
+| Training prevalence | 0.5000 | [0.5000, 0.5000] | 0.4942 | 0.2523 | 0.6978 |
+| 30-day count | 0.7238 | [0.6948, 0.7506] | 0.7155 | n/a | n/a |
+| 90-day count | 0.7813 | [0.7552, 0.8047] | 0.7836 | n/a | n/a |
+| Negative recency | 0.7367 | [0.7109, 0.7602] | 0.6738 | n/a | n/a |
+| Logistic regression | 0.7845 | [0.7587, 0.8072] | 0.8061 | 0.1898 | 0.5580 |
+| Gradient boosting | 0.7851 | [0.7597, 0.8079] | 0.8050 | 0.1885 | 0.5535 |
 
-These are one chronological holdout's results, without tuning on the holdout. They are not confidence intervals or claims about production performance. UCI has no original arrival history: evaluation reconstructs event-time availability from the imported snapshot. The model is evaluated on later purchases, including returning customers, rather than unseen customers only.
+The holdout contains 1,964 customers. Bootstrap unit: whole customer, sampled with
+replacement, retaining all their anchors with multiplicity. Seed: 42. Resamples:
+2,000. Percentile confidence level: 95%. Predictions are fixed during resampling;
+models are not refit. The same resamples are used for all methods and paired
+differences. Counts and negative recency are ranking scores, so their probability
+metrics are undefined.
+
+Against the predeclared 90-day count reference, logistic regression's AUC difference
+is **+0.0032 (95% interval [-0.0011, +0.0069])**; gradient boosting's is
+**+0.0038 ([-0.0007, +0.0083])**. Both include zero. **Neither model demonstrates a
+clear AUC improvement over that rule on this holdout.** The full exploratory paired
+comparisons are in [the generated report](artifacts/uci/evaluation.md).
+
+The target is another purchase in the next 30 days **given a customer purchases
+now**, not general churn. These are one chronological holdout's results, without
+tuning on the holdout. The intervals are conditional on this period and fitted
+models; they do not measure variation across seasons, training samples or future
+deployments, and have no multiple-comparison correction. UCI has no original
+arrival history: evaluation reconstructs event-time availability from the imported
+snapshot. The model is evaluated on later purchases, including returning customers,
+rather than unseen customers only.
 
 ## Local performance sample
 
-Measured by `python scripts/benchmark.py`; 200 feature reads per pass and 1,000 single-event writes from eight concurrent clients.
+Measurements retained from the initial project; not rerun for this evaluation-only
+revision. Command: `python scripts/benchmark.py`; 200 feature reads per pass and
+1,000 single-event writes from eight concurrent clients.
 
 | Measurement | Result |
 |---|---:|
@@ -68,10 +96,18 @@ Local library calls include SQLite connection setup and persistence. They exclud
 
 - `data/store.sqlite3`: processed UCI events, committed snapshot and materialized feature rows.
 - `artifacts/uci/model.joblib`: trained model; load only trusted local artifacts.
+- `artifacts/uci/gradient_boosting.joblib`: fixed-parameter nonlinear alternative, also serveable.
 - `artifacts/uci/metrics.json`: machine-readable evaluation and feature metadata.
+- `artifacts/uci/evaluation.md`: generated comparison, paired intervals and scope caveats.
+- `artifacts/uci/holdout_predictions.csv`: shared holdout identities, labels and all six method scores.
 - `artifacts/uci/training_features.csv`: all eligible examples with targets and split assignments.
 - `artifacts/import_report.json`: normalization decisions, counts and workbook checksum.
 - `artifacts/benchmark.json`: measured local performance and scope.
 - `artifacts/api_smoke.json`: actual HTTP feature/prediction response.
 - `artifacts/offline_features.csv`: output of the example offline query file.
 - `data/raw/source.json`: UCI download provenance; raw workbook omitted from this bundle.
+
+The report, metrics, feature CSV, prediction CSV and import report are committed.
+SQLite databases and serialized models are bundled but excluded from Git. The
+archive includes actual Git history; `AI_ASSISTANCE.md` explains its scope and the
+distinction between automated checkpoints and personal contributions.

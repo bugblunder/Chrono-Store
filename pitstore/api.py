@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import Field
 
+from . import __version__
 from .contracts import Contract, FEATURE_NAMES, FEATURE_VERSION, FeatureQuery, FeatureVector, IngestResult, Purchase
 from .ingestion import IngestionBusy, IngestionWorker
 from .store import EventConflict, FeatureStore
@@ -31,7 +32,7 @@ def create_app(db_path: str | Path = "data/store.sqlite3", model_path: str | Pat
         finally:
             await asyncio.to_thread(app.state.writer.close)
 
-    app = FastAPI(title="Point-in-time Feature Store", version="0.1.0", lifespan=lifespan,
+    app = FastAPI(title="Point-in-time Feature Store", version=__version__, lifespan=lifespan,
                   description="Strict past-only features with immutable, replayable database snapshots.")
 
     @app.get("/health")

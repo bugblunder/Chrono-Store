@@ -3,7 +3,14 @@ __pycache__/
 *.egg-info/
 .venv/
 data/
-artifacts/
+artifacts/*
+!artifacts/uci/
+!artifacts/import_report.json
+artifacts/uci/*
+!artifacts/uci/evaluation.md
+!artifacts/uci/metrics.json
+!artifacts/uci/holdout_predictions.csv
+!artifacts/uci/training_features.csv
 .coverage
 *.sqlite3*
 build/

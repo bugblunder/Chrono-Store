@@ -4,6 +4,11 @@ A runnable Python project that ingests timestamped purchases, persists versioned
 
 The central invariant is **every feature for time `t` uses events strictly before `t`**. A captured database snapshot additionally freezes which events were known, allowing exact replay after out-of-order events arrive.
 
+The evaluation includes untuned count/recency rules, logistic regression, gradient boosting,
+and paired customer-bootstrap AUC intervals. On the included UCI holdout, neither learned
+model clearly improves on the 90-day count rule. See the committed
+[evaluation report](artifacts/uci/evaluation.md) and [AI-assistance disclosure](AI_ASSISTANCE.md).
+
 ## Quick start
 
 Requires Python 3.11+. From this directory:
@@ -42,7 +47,7 @@ Model artifacts must be trusted: joblib uses Python pickle. Regenerate the model
 ```bash
 python -m pitstore download
 python -m pitstore import-uci "data/raw/Online Retail.xlsx" --shuffle
-python -m pitstore train
+python -m pitstore train --bootstrap-resamples 2000 --bootstrap-seed 42
 python -m pitstore serve --model artifacts/uci/model.joblib
 ```
 
@@ -66,7 +71,55 @@ This estimates repeat purchase conditional on a customer purchasing now. It is n
 
 Amounts are ingested and summed as integer pence. Feature output converts them to GBP. Unknown customers receive the documented cold-start defaults.
 
-The default pipeline uses a 90-day global warmup, removes anchors without a full 30-day outcome window, and holds out the last 25% of distinct eligible prediction timestamps. Training rows are purged unless their **label end is strictly before the first test timestamp**. Scaling is fitted only on the remaining training rows. A logistic-regression model is compared with a training-prevalence baseline using ROC AUC, average precision, Brier score, and log loss. No hyperparameters are selected using the test set.
+The default pipeline uses a 90-day global warmup, removes anchors without a full 30-day outcome window, and holds out the last 25% of distinct eligible prediction timestamps. Training rows are purged unless their **label end is strictly before the first test timestamp**. Scaling is fitted only on the remaining training rows. Logistic regression and fixed-parameter gradient boosting are compared with training prevalence, 30-day and 90-day purchase counts, and negative recency. No hyperparameters or default serving model are selected using the test set.
+
+## Model comparison and uncertainty
+
+All methods use the same 7,710 training anchors and 3,112 test anchors (1,964 test customers),
+with 1,501 anchors purged around the temporal boundary. Every learned input and baseline
+score comes from the shared served-feature implementation.
+
+| Method | Holdout ROC AUC | 95% customer-bootstrap interval |
+|---|---:|---|
+| Training-prevalence baseline | 0.5000 | [0.5000, 0.5000] |
+| 30-day count rule | 0.7238 | [0.6948, 0.7506] |
+| 90-day count rule | 0.7813 | [0.7552, 0.8047] |
+| Recency rule | 0.7367 | [0.7109, 0.7602] |
+| Logistic regression | 0.7845 | [0.7587, 0.8072] |
+| Gradient boosting | 0.7851 | [0.7597, 0.8079] |
+
+The rules rank examples by raw `purchases_30d`, raw `purchases_90d`, or
+`-recency_days`; they have no fitted thresholds. Brier score and log loss are reported
+only for probability outputs, because raw counts and recency are not probabilities.
+Gradient boosting uses 150 trees, learning rate 0.05, depth 3 and minimum leaf size 30,
+with no early stopping. Full settings are saved in `metrics.json`.
+
+The 2,000 bootstrap draws sample **whole customers with replacement**, retaining all
+their held-out purchases with multiplicity. The same draws are used for every method.
+The evaluation remains purchase-anchor weighted; it is not an average of per-customer AUCs.
+Single-class draws are skipped and counted. Paired AUC differences are computed within
+each draw. The predeclared primary reference is the 90-day count rule:
+
+- Logistic regression minus count: **+0.0032**, 95% interval **[-0.0011, +0.0069]**.
+- Gradient boosting minus count: **+0.0038**, 95% interval **[-0.0007, +0.0083]**.
+
+Both intervals include zero: **neither model shows a clear AUC improvement over the
+90-day count rule on this holdout**. This is a useful negative finding. Both models do
+better than the weaker 30-day count and recency rules on the same exploratory comparison.
+Intervals are conditional on fixed fitted models and one period; they do not measure
+variation across training samples, seasons or future deployments. There is no
+multiple-comparison correction. More chronological holdouts would be needed for a
+broader performance claim.
+
+Training writes `metrics.json`, a readable `evaluation.md`, `training_features.csv`,
+`holdout_predictions.csv`, and two model artifacts. The report and both CSVs are
+committed so the comparison is inspectable without running training. Models and the
+processed database are included in the download, but kept out of Git.
+Logistic regression stays the default; to explicitly serve gradient boosting:
+
+```bash
+python -m pitstore serve --db data/store.sqlite3 --model artifacts/uci/gradient_boosting.joblib
+```
 
 By default, the latest ingested event time is a conservative observation endpoint. `train --observation-end TIMESTAMP` explicitly asserts that outcome capture is complete through that time. Do not move it forward without that evidence. Label completeness assumes that the imported purchase history is complete inside its observation period.
 
@@ -116,7 +169,8 @@ flowchart TD
 - `pitstore/store.py`: transactions, indexes, immutable events, snapshot reads and materialization.
 - `pitstore/ingestion.py`: bounded queue, one API writer, shutdown drain and backpressure.
 - `pitstore/data.py`: UCI cleaning, invoice aggregation, downloader and synthetic generator.
-- `pitstore/training.py`: mature labels, temporal holdout, model, metrics and feature export.
+- `pitstore/training.py`: mature labels, temporal holdout, two models and feature/prediction exports.
+- `pitstore/evaluation.py`: count/recency baselines, paired customer bootstrap and report generation.
 - `pitstore/api.py`: FastAPI lifecycle and endpoints.
 - `pitstore/cli.py`: commands for import, offline reads, training, serving and the leakage demonstration.
 - `tests/`: independent reference checks, boundary cases, importer, API, concurrency and ML integration.
@@ -163,7 +217,7 @@ python -m pitstore offline examples/queries.jsonl --output artifacts/offline_fea
 
 ## Validation and limits
 
-Run `python -m unittest discover -s tests -v`. The suite checks half-open windows, microseconds/timezones, same-invoice exclusion, future invariance, out-of-order arrival, snapshot replay without a cache, entity isolation, idempotency, conflict rollback, immutable persistence, concurrent writes, consistent batch reads during a write, bounded admission, shutdown draining, HTTP validation, label maturity and training/serving parity.
+Run `python -m unittest discover -s tests -v`. The 34-test suite checks half-open windows, microseconds/timezones, same-invoice exclusion, future invariance, out-of-order arrival, snapshot replay without a cache, entity isolation, idempotency, conflict rollback, immutable persistence, concurrent writes, consistent batch reads during a write, bounded admission, shutdown draining, HTTP validation, label maturity and training/serving parity. Evaluation tests independently duplicate customer rows to verify bootstrap intervals, check paired differences and degenerate samples, verify baseline directions, serve the boosting model, and flip held-out labels to prove fitted predictions do not change.
 
 `python -m pitstore leakage-demo` prints:
 
@@ -194,3 +248,36 @@ python scripts/benchmark.py --db data/store.sqlite3
 ```
 
 This reports measured percentiles and scope; it does not include network latency or claim production capacity.
+
+## Authorship and your own commits
+
+This is an AI-assisted project. [AI_ASSISTANCE.md](AI_ASSISTANCE.md) records the scope of
+assistance and what the new Git history represents. The supplied files had no Git
+history. The included history starts with their import, followed by the actual
+evaluation and documentation changes made in this revision. Those checkpoints use
+the neutral local identity `Project automation <automation@localhost>`; they are not
+evidence of work you personally wrote. No earlier development history was reconstructed.
+
+To record your own contributions, configure your real Git identity locally, make and
+review a substantive change, run its relevant checks, then commit the files you changed:
+
+```bash
+git config --local user.name "Your name"
+git config --local user.email "Your verified email or GitHub noreply email"
+git diff
+python -m unittest discover -s tests -v
+git add path/to/files-you-changed
+git commit -m "Describe the change you implemented and verified"
+```
+
+Suitable next contributions include adding an independent rolling temporal evaluation,
+benchmarking index alternatives, or implementing a tested cache-retention policy.
+Use a resume statement only after reviewing the implementation and adapting the
+authorship verb to your actual contribution. A defensible statement is:
+
+> Implemented and evaluated an AI-assisted SQLite/FastAPI feature store with point-in-time
+> joins and concurrent ingestion; conditional 30-day repeat-purchase logistic regression
+> achieved 0.7845 holdout ROC AUC, compared with 0.7813 for a 90-day count baseline, with
+> no clear improvement under paired customer-bootstrap intervals.
+
+Use “reviewed and extended” instead of “implemented” if that better describes your work.

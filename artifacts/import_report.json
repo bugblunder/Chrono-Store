@@ -1,0 +1,20 @@
+{
+  "input_rows": 541909,
+  "source_timezone_assumption": "Europe/London",
+  "rows_without_complete_identity": 135080,
+  "cancellation_rows": 8905,
+  "nonpositive_or_missing_value_rows": 40,
+  "multi_timestamp_invoices": 30,
+  "max_invoice_span_seconds": 60.0,
+  "eligible_line_rows": 397884,
+  "purchase_events": 18532,
+  "duplicate_line_policy": "keep; repeated identical lines may be legitimate",
+  "amount_policy": "positive purchase lines only; returns are excluded",
+  "invoice_time_policy": "latest eligible line timestamp (invoice completion)",
+  "ingestion_history": "not provided by UCI; assigned locally during import",
+  "input_sha256": "43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d",
+  "inserted": 18532,
+  "duplicates": 0,
+  "snapshot_seq": 18532,
+  "shuffled": true
+}
