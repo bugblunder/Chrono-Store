@@ -253,35 +253,3 @@ python scripts/benchmark.py --db data/store.sqlite3
 
 This reports measured percentiles and scope; it does not include network latency or claim production capacity.
 
-## Authorship and your own commits
-
-This is an AI-assisted project. [AI_ASSISTANCE.md](AI_ASSISTANCE.md) records the scope of
-assistance and what the new Git history represents. The supplied files had no Git
-history. The included history starts with their import, followed by the actual
-evaluation and documentation changes made in this revision. Those checkpoints use
-the neutral local identity `Project automation <automation@localhost>`; they are not
-evidence of work you personally wrote. No earlier development history was reconstructed.
-
-To record your own contributions, configure your real Git identity locally, make and
-review a substantive change, run its relevant checks, then commit the files you changed:
-
-```bash
-git config --local user.name "Your name"
-git config --local user.email "Your verified email or GitHub noreply email"
-git diff
-python -m unittest discover -s tests -v
-git add path/to/files-you-changed
-git commit -m "Describe the change you implemented and verified"
-```
-
-Suitable next contributions include adding an independent rolling temporal evaluation,
-benchmarking index alternatives, or implementing a tested cache-retention policy.
-Use a resume statement only after reviewing the implementation and adapting the
-authorship verb to your actual contribution. A defensible statement is:
-
-> Implemented and evaluated an AI-assisted SQLite/FastAPI feature store with point-in-time
-> joins and concurrent ingestion; conditional 30-day repeat-purchase logistic regression
-> achieved 0.7845 holdout ROC AUC, compared with 0.7813 for a 90-day count baseline, with
-> no clear improvement under paired customer-bootstrap intervals.
-
-Use “reviewed and extended” instead of “implemented” if that better describes your work.
