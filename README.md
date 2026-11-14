@@ -8,8 +8,7 @@ The central invariant is **every feature for time `t` uses events strictly befor
 
 The evaluation includes untuned count/recency rules, logistic regression, gradient boosting,
 and paired customer-bootstrap AUC intervals. On the included UCI holdout, neither learned
-model clearly improves on the 90-day count rule. See the committed
-[evaluation report](artifacts/uci/evaluation.md) and [AI-assistance disclosure](AI_ASSISTANCE.md).
+model clearly improves on the 90-day count rule.
 
 ## Quick start
 
